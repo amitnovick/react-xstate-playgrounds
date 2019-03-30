@@ -2,11 +2,16 @@ import React from 'react';
 import { useMachine } from '@xstate/react';
 import { Machine, assign } from 'xstate';
 
+const URL = 'https://jsonplaceholder.typicode.com/todos';
+
+const fetchUser = query => fetch(`${URL}/${query}`).then(res => res.json());
+
 const fetchMachine = Machine({
   id: 'fetch',
   initial: 'idle',
   context: {
-    data: undefined
+    user: null,
+    error: null
   },
   states: {
     idle: {
@@ -14,13 +19,17 @@ const fetchMachine = Machine({
     },
     loading: {
       invoke: {
-        src: 'fetchData',
+        src: (ctx, event) => fetchUser('1'),
         onDone: {
           target: 'success',
           actions: assign({
-            data: (_, event) => event.data
+            user: (_, event) => event.data
           })
         }
+        // onError: {
+        //   target: 'failure',
+        //   actions: assign({ error: (ctx, event) => event.data })
+        // }
       }
     },
     success: {
@@ -30,20 +39,13 @@ const fetchMachine = Machine({
   }
 });
 
-const URL = 'https://jsonplaceholder.typicode.com/todos';
-
 function Fetcher({ onResolve }) {
   const [current, send] = useMachine(
     fetchMachine.withContext({
       actions: {
         notifyResolve: ctx => {
-          onResolve(ctx.data);
+          onResolve(ctx.user.toString());
         }
-      },
-      services: {
-        fetchData: (ctx, event) =>
-          fetch(`${URL}/${event.query}`).then(res => res.json())
-        // console.log('fetching data')
       }
     })
   );
@@ -58,7 +60,7 @@ function Fetcher({ onResolve }) {
     case 'loading':
       return <div>Searching...</div>;
     case 'success':
-      return <div>Success! Data: {current.context.data}</div>;
+      return <div>Success! Data: {JSON.stringify(current.context.user)}</div>;
     default:
       return null;
   }
