@@ -8,7 +8,7 @@ class App extends React.Component {
     return (
       <div className="App">
         <Toggler />
-        <Fetcher onResolve={value => console.log('succeeded', value)} />
+        <Fetcher />
       </div>
     );
   }
