@@ -22,8 +22,8 @@ const fetchUser = query =>
       }
     });
 
-const fetchMachine = Machine({
-  id: 'fetch',
+const mainMachine = Machine({
+  id: 'main',
   initial: 'idle',
   states: {
     idle: {
@@ -42,13 +42,26 @@ const fetchMachine = Machine({
 });
 
 function Fetcher({ query }) {
-  const [current, send] = useMachine(fetchMachine);
+  const [current, send] = useMachine(mainMachine);
+  const [response, setResponse] = React.useState({});
 
   const onButtonClick = query => {
     send({ type: 'FETCH' });
     return fetchUser(query)
-      .then(data => send({ type: 'FETCH_SUCCEEDED', outcome: 'success' }))
-      .catch(error => send({ type: 'FETCH_FAILED', outcome: 'failure' }));
+      .then(userData => {
+        const functions = [
+          () => setResponse(userData),
+          () => send({ type: 'FETCH_SUCCEEDED', outcome: 'success' })
+        ];
+        functions.forEach(func => func());
+      })
+      .catch(error => {
+        const functions = [
+          () => setResponse({ errorType: error.message }),
+          () => send({ type: 'FETCH_FAILED', outcome: 'failure' })
+        ];
+        functions.forEach(func => func());
+      });
   };
 
   switch (current.value) {
@@ -60,10 +73,14 @@ function Fetcher({ query }) {
       );
     case 'loading':
       return <div>Searching...</div>;
-    case 'success':
-      return <div>Success!</div>;
-    case 'failure':
-      return <div>Failed. :-(</div>;
+    case 'success': {
+      const userData = response;
+      return <div>Success! {JSON.stringify(userData)}</div>;
+    }
+    case 'failure': {
+      const { errorType } = response;
+      return <div>Failed. type: {errorType}</div>;
+    }
     default:
       return null;
   }
